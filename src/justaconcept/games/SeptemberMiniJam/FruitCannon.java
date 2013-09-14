@@ -1,24 +1,33 @@
 package justaconcept.games.SeptemberMiniJam;
 
 import java.awt.geom.AffineTransform;
-import java.sql.Struct;
 import java.util.ArrayList;
 
 import processing.core.PApplet;
 import processing.core.PFont;
 import processing.core.PImage;
-import sun.reflect.ReflectionFactory.GetReflectionFactoryAction;
+
+
 
 public class FruitCannon extends PApplet {
-    final boolean draw_collision_box = true;
-    void drawCollisionBox (Circle collision) {
-	if (draw_collision_box) {
-		stroke(0,200,0);
-		fill(0,0,0,0);
-		ellipse(collision.x, collision.y, collision.radius *2, collision.radius*2);
-	    }
-    }
+    final float STEP_WIDTH = 25.f;
+    final float DEFAULT_PROJECTILE_SPEED = 1.79f;
+    final float DEFAULT_ROTATION_STEP = 0.049f;
+    final float DEFAULT_TOMATO_SPEED = 0.15f;
+    final float DEFAULT_TOMATO_STEP = 0.20f;
+    final float DEFAULT_TOMATO_MAX = 6.0f;
+    final int DEFAULT_TOMATO_HP = 4;
     
+    final boolean draw_collision_box = false;
+
+    void drawCollisionBox(Circle collision) {
+	if (draw_collision_box) {
+	    stroke(0, 200, 0);
+	    fill(0, 0, 0, 0);
+	    ellipse(collision.x, collision.y, collision.radius * 2, collision.radius * 2);
+	}
+    }
+
     class Circle {
 	public float x;
 	public float y;
@@ -49,7 +58,7 @@ public class FruitCannon extends PApplet {
 
 	void draw() {
 	    move();
-	    displayRotated(sprite_, direction_, x_- sprite_.width / 2, y_- sprite_.height /2);
+	    displayRotated(sprite_, direction_, x_ - sprite_.width / 2, y_ - sprite_.height / 2);
 	    drawCollisionBox(getHitCircle());
 	}
 
@@ -89,7 +98,7 @@ public class FruitCannon extends PApplet {
 	    this.hp_ = DEFAULT_TOMATO_HP;
 	    this.maxhp_ = DEFAULT_TOMATO_HP;
 	}
-	
+
 	public void takeDamage() {
 	    hp_--;
 	    if (hp_ <= maxhp_ / 2) {
@@ -148,27 +157,26 @@ public class FruitCannon extends PApplet {
     ArrayList<PImage> tomato_imgs;
     final int TOMATO_STATE_COUNT = 3;
 
-    final float STEP_WIDTH = 25.f;
-    final float DEFAULT_ROTATION_STEP = 0.015f;
-    final float DEFAULT_PROJECTILE_SPEED = 0.85f;
-    final float DEFAULT_TOMATO_SPEED = 0.15f;
-    final float DEFAULT_TOMATO_STEP = 0.25f;
-    final float DEFAULT_TOMATO_MAX = 10f;
-    final int DEFAULT_TOMATO_HP = 4;
     float center_x;
     float center_y;
 
-    boolean team_one_pressed = false;
-    boolean team_two_pressed = false;
+    boolean seed_shot = false;
 
     float melon_rotation;
     float rotation_step = DEFAULT_ROTATION_STEP;
 
     Tomato tomato;
     ArrayList<SeedProjectile> projectiles;
-    
+
     boolean game_finished;
     boolean veg_won;
+    
+    boolean melon_left = false;
+    boolean melon_right = false;
+    boolean tomato_left = false;
+    boolean tomato_right = false;
+    boolean melon_shoot = false;
+    boolean reset_key = false;
 
     public void loadAssets() {
 	font = loadFont("Ziggurat.vlw");
@@ -195,25 +203,25 @@ public class FruitCannon extends PApplet {
     public Circle getHitCircle() {
 	return new Circle(0f, 0f, 100f);
     }
-    
+
     boolean isCollision(Circle c1, Circle c2) {
 	float dist_sq = (c1.x - c2.x) * (c1.x - c2.x) + (c1.y - c2.y) * (c1.y - c2.y);
 	println(Math.sqrt(dist_sq));
 	return dist_sq <= (c1.radius + c2.radius) * (c1.radius + c2.radius);
     }
-    
+
     void spawnTomato() {
 	float angle = random(PI * 2);
 	tomato = new Tomato(WIDTH / 2f * (float) Math.sin(angle), HEIGHT / 2f * (float) Math.cos(angle), angle, DEFAULT_TOMATO_SPEED, tomato_imgs);
     }
 
     void resetGame() {
-	game_finished  = false;
+	game_finished = false;
 	setPlanetPos();
 	spawnTomato();
 	projectiles = new ArrayList<SeedProjectile>();
     }
-    
+
     @Override
     public void setup() {
 	size(WIDTH, HEIGHT);
@@ -244,32 +252,73 @@ public class FruitCannon extends PApplet {
 	text("Score: " + score_two, WIDTH - 215, 40);
     }
 
-    void readKeys() {
-	if (keyPressed) {
-	    if (keyCode == LEFT) {
-		melon_rotation -= rotation_step;
-	    } else if (keyCode == RIGHT) {
-		melon_rotation += rotation_step;
-	    }
+    public void keyPressed() {
+	if (keyCode == LEFT) {
+	    melon_left = true;
+	} else if (keyCode == RIGHT) {
+	    melon_right = true;
+	}
 
-	    if (key == 'a') {
-		tomato.leftKey();
-	    } else if (key == 'd') {
-		tomato.rightKey();
-	    }
+	if (keyCode == UP) {
+	    tomato_left = true;
+	} else if (keyCode == DOWN) {
+	    tomato_right = true;
+	}
 
-	    if (key == ' ') {
-		AffineTransform transform = AffineTransform.getRotateInstance(melon_rotation, 0, melon_img.height / 2);
-		projectiles.add(new SeedProjectile((float) transform.getTranslateX(), (float) transform.getTranslateY() - (melon_img.height / 2), melon_rotation,
-			DEFAULT_PROJECTILE_SPEED, seed_img));
-	    }
+	if (key == ' ' && !seed_shot) {
 	    
-	    if (key == 'r') {
-		resetGame();
-	    }
+	    seed_shot = true;
+	    AffineTransform transform = AffineTransform.getRotateInstance(melon_rotation, 0, melon_img.height / 2);
+	    projectiles.add(new SeedProjectile((float) transform.getTranslateX(), (float) transform.getTranslateY() - (melon_img.height / 2), melon_rotation,
+		    DEFAULT_PROJECTILE_SPEED, seed_img));
+	}
+
+	if (key == 'r') {
+	    reset_key = true;
+	}
+    }
+
+    public void keyReleased() {
+	if (keyCode == LEFT) {
+	    melon_left = false;
+	} else if (keyCode == RIGHT) {
+	    melon_right = false;
+	}
+
+	if (keyCode == UP) {
+	    tomato_left = false;
+	} else if (keyCode == DOWN) {
+	    tomato_right = false;
+	}
+
+	if (key == ' ') {
+	    
+	    seed_shot = false;
+	}
+
+	if (key == 'r') {
+	    reset_key = false;
 	}
     }
     
+    public void doActions() {
+	if (melon_left) {
+	    melon_rotation -= rotation_step;
+	} else if (melon_right) {
+	    melon_rotation += rotation_step;
+	}
+
+	if (tomato_left) {
+	    tomato.leftKey();
+	} else if (tomato_right) {
+	    tomato.rightKey();
+	}
+
+	if (reset_key) {
+	    resetGame();
+	}
+    }
+
     void testCollisions() {
 	if (isCollision(getHitCircle(), tomato.getHitCircle())) {
 	    game_finished = true;
@@ -285,15 +334,16 @@ public class FruitCannon extends PApplet {
 
     @Override
     public void draw() {
-	readKeys();
+	//readKeys();
+	doActions();
 	if (game_finished) {
 	    if (veg_won)
 		image(veg_win_img, 0f, 0f);
-	    else 
+	    else
 		image(fruit_win_img, 0f, 0f);
 	    return;
 	}
-	
+
 	// println("FrameRate: " + String.valueOf(frameRate));
 
 	background(bg_img);
@@ -310,7 +360,6 @@ public class FruitCannon extends PApplet {
 
 	image(mask_img, 0, 0);
 
-	
 	testCollisions();
     }
 }
