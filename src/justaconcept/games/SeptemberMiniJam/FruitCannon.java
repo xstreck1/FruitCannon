@@ -1,6 +1,7 @@
 package justaconcept.games.SeptemberMiniJam;
 
 import java.awt.geom.AffineTransform;
+import java.sql.Struct;
 import java.util.ArrayList;
 
 import processing.core.PApplet;
@@ -9,6 +10,12 @@ import processing.core.PImage;
 import sun.reflect.ReflectionFactory.GetReflectionFactoryAction;
 
 public class FruitCannon extends PApplet {
+    class Circle {
+	public float x;
+	public float y;
+	public float radius;
+    }
+    
     class SeedProjectile {
 	float x_;
 	float y_;
@@ -38,35 +45,52 @@ public class FruitCannon extends PApplet {
     class Tomato {
 	float x_;
 	float y_;
-	float direction_;
-	float speed_;
-	int state;
+	float angle_;
+	float fall_speed_;
+	float lateral_velocity_;
+	float step_;
+	int state_;
+	float max_speed_;
 	ArrayList<PImage> sprites_;
 
 	public Tomato(float x_, float y_, float direction_, float speed_, ArrayList<PImage> sprites_) {
-	    this.x_ = x_ - sprites_.get(0).width / 2;
+	    this.x_ = x_- sprites_.get(0).width / 2;
 	    this.y_ = y_ - sprites_.get(0).height / 2;
-	    this.direction_ = direction_;
-	    this.speed_ = speed_;
+	    this.angle_ = direction_;
+	    this.fall_speed_ = speed_;
+	    this.lateral_velocity_ = 0f;
 	    this.sprites_ = sprites_;
-	    state = 0;
+	    this.step_ = DEFAULT_TOMATO_STEP;
+	    this.max_speed_ = DEFAULT_TOMATO_MAX;
+	    this.state_ = 0;
 	}
 
 	public void draw() {
 	    println(String.valueOf(x_));
-	    displayRotated(sprites_.get(state), direction_, x_, y_);
+	    move();
+	    displayRotated(sprites_.get(state_), angle_, x_ - sprites_.get(0).width / 2, y_ - sprites_.get(0).height / 2);
 	}
 
 	public void move() {
-
+	    float distance = (float) Math.sqrt(x_ * x_ + y_ * y_);
+	    float d_angle = (float) Math.atan(lateral_velocity_ / distance);
+	    angle_ += d_angle;
+	    x_ = (distance - fall_speed_) * (float) Math.sin(angle_);
+	    y_ = -(distance - fall_speed_) * (float) Math.cos(angle_);
 	}
 	
 	public void leftKey() {
-	    
+	    lateral_velocity_ -= step_;
+	    if (lateral_velocity_ < -max_speed_) {
+		lateral_velocity_ = -max_speed_;
+	    }
 	}
 	
 	public void rightKey() {
-	    
+	    lateral_velocity_ += step_;
+	    if (lateral_velocity_ > max_speed_) {
+		lateral_velocity_ = max_speed_;
+	    }
 	}
     }
 
@@ -76,14 +100,16 @@ public class FruitCannon extends PApplet {
     int score_one = 0;
     int score_two = 0;
     PFont font;
-    PImage melon_img, banana_img, seed_img;
+    PImage melon_img, banana_img, seed_img, bg_img, mask_img;
     ArrayList<PImage> tomato_imgs;
     final int TOMATO_STATE_COUNT = 3;
 
     final float STEP_WIDTH = 25.f;
     final float DEFAULT_ROTATION_STEP = 0.015f;
     final float DEFAULT_PROJECTILE_SPEED = 0.85f;
-    final float DEFAULT_TOMATO_SPEED = 0.85f;
+    final float DEFAULT_TOMATO_SPEED = 0.15f;
+    final float DEFAULT_TOMATO_STEP = 0.25f;
+    final float DEFAULT_TOMATO_MAX = 10f;
     float center_x;
     float center_y;
 
@@ -100,8 +126,11 @@ public class FruitCannon extends PApplet {
 	font = loadFont("Ziggurat.vlw");
 	textFont(font, 32);
 	melon_img = loadImage("fruit_melon.png");
-	banana_img = loadImage("fruit_banana.png");
-	seed_img = loadImage("seed.png");
+	banana_img = loadImage("fruit_bananaWithEyeball.png");
+	seed_img = loadImage("fruit_projectile.png");
+	bg_img = loadImage("bg_image.png");
+	mask_img = loadImage("bg_mask.png");
+	
 	tomato_imgs = new ArrayList<PImage>();
         tomato_imgs.add(loadImage("veg_tomatoFull.png"));
         tomato_imgs.add(loadImage("veg_tomatoHalf.png"));
@@ -177,15 +206,19 @@ public class FruitCannon extends PApplet {
     public void draw() {
 	// println("FrameRate: " + String.valueOf(frameRate));
 
-	background(255);
+	background(bg_img);
 
 	writeScore();
+	pushMatrix();
 	translate(center_x, center_y);
 
 	image(melon_img, -melon_img.width / 2f, -melon_img.height / 2f);
 	displayRotated(banana_img, melon_rotation, -banana_img.width / 2f, -banana_img.height / 2f);
 	tomato.draw();
 	displayProjectiles();
+	popMatrix();
+	
+	image(mask_img, 0, 0);
 
 	readKeys();
     }
