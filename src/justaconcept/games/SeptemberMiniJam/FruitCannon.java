@@ -6,10 +6,14 @@ import java.util.ArrayList;
 import processing.core.PApplet;
 import processing.core.PFont;
 import processing.core.PImage;
-
+import ddf.minim.AudioPlayer;
+import ddf.minim.Minim;
 
 
 public class FruitCannon extends PApplet {
+    AudioPlayer player;
+    Minim minim;
+    
     final float STEP_WIDTH = 25.f;
     final float DEFAULT_PROJECTILE_SPEED = 1.79f;
     final float DEFAULT_ROTATION_STEP = 0.049f;
@@ -225,6 +229,11 @@ public class FruitCannon extends PApplet {
     @Override
     public void setup() {
 	size(WIDTH, HEIGHT);
+	    
+	minim = new Minim(this);
+	player = minim.loadFile("music.mp3");
+	player.play();
+	
 	loadAssets();
 	resetGame();
     }
